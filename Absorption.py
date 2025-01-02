@@ -1,7 +1,5 @@
-from pgmpy.factors.discrete import DiscreteFactor
 import numpy as np
 def absorption(junction_tree, absorbed_clique, absorber_clique, separator):
-
     absorbed_potential = junction_tree.get_factors(absorbed_clique)
     absorber_potential = junction_tree.get_factors(absorber_clique)
 
@@ -23,83 +21,59 @@ def absorption(junction_tree, absorbed_clique, absorber_clique, separator):
     # 6. Aggiorna il junction tree con i fattori aggiornati
     junction_tree.add_factors(absorber_potential)  # Sostituisce il potenziale dell'assorbitore
 
-def message_passing(junction_tree, junction_tree_root, evidences, separator_tables):
-    def forward_pass(current_clique, parent_clique=None, leaves=None):
-        # Inizializza leaves solo se non è già stato passato come argomento
-        if leaves is None:
-            leaves = []
+def message_passing(junction_tree, junction_tree_root, evidences, separator_tables,leaves):
 
-        # Recupera il potenziale della cricca
+    def propagatemessage(current_clique, parent_clique=None):
+
         potential = junction_tree.get_factors(current_clique)
-
+        dict={}
         # Applica evidenze, se presenti
         for variable in current_clique:
             if variable in evidences:
                 evidence = evidences[variable]
-                apply_evidence(potential, {variable: evidence})
+                dict[variable]=evidence
+        apply_evidence(potential, list(dict.items()))
 
         # Trova i vicini escludendo il genitore
         neighbors = [neighbor for neighbor in junction_tree.neighbors(current_clique) if neighbor != parent_clique]
         if not neighbors:  # Se non ci sono vicini escluso il genitore, è una foglia
-            leaves.append(current_clique)
+            return
         else:
             # Propaga ai vicini
             for neighbor in neighbors:
                 separator =separator_tables[tuple(sorted(set(current_clique).union(set(neighbor))))]
                 absorption(junction_tree, current_clique, neighbor, separator)
-                forward_pass(neighbor, current_clique, leaves)
+                propagatemessage(neighbor, current_clique)
 
-        return leaves
 
-    def backward_pass(leaves):
-
-        visited_edges = set()  # Per evitare di processare lo stesso arco più volte
-
-        def propagate(clique, parent_clique=None):
-
-            # Recupera i vicini escluso il nodo da cui proviene il messaggio
-            neighbors = [neighbor for neighbor in junction_tree.neighbors(clique) if neighbor != parent_clique]
+    def collectmessages(leaves):
+        visited_edges = set()
+        def propagatebackwards(clique,parent_clique=None):
             if clique==junction_tree_root:
                 return
 
+            neighbors = [neighbor for neighbor in junction_tree.neighbors(clique) if neighbor != parent_clique]
+
             for neighbor in neighbors:
-                print(neighbor)
                 edge =tuple(sorted(set(clique).union(set(neighbor))))
                 if edge not in visited_edges:
                     visited_edges.add(edge)
                     separator = separator_tables[edge]
                     absorption(junction_tree,clique ,neighbor , separator)
-                propagate(neighbor,clique)
-
-
-        # Avvia la propagazione per ogni foglia
+                    propagatebackwards(neighbor,clique)
         for leaf in leaves:
-            propagate(leaf)
+            propagatebackwards(leaf)
 
-
-    leaves = forward_pass(junction_tree_root)
-    backward_pass(leaves)
+    collectmessages(leaves)
+    propagatemessage(junction_tree_root)
 
 
 def apply_evidence(potential, evidence):
-    factor_shape = potential.values.shape
+    print('sto applicando la evidenza')
+    print(potential)
+    new_potential=potential.reduce(evidence, inplace=False)
+    potential=new_potential
+    print(potential)
 
-    # Itera su tutte le combinazioni di valori degli stati del potenziale
-    for index in range(potential.values.size):
-        # Converte l'indice lineare in un indice multidimensionale
-        state_combination = np.unravel_index(index, factor_shape)
-
-        # Verifica se la combinazione soddisfa l'evidenza
-        valid = True
-        for var, assignment in evidence.items():
-            var_index = potential.variables.index(var)  # Trova l'indice della variabile
-            state_no = potential.get_state_no(var, assignment)  # Ottieni lo stato corrispondente
-            if state_combination[var_index] != state_no:
-                valid = False
-                break
-
-        # Se non è valido, imposta il valore a 0
-        if not valid:
-            potential.values.flat[index] = 0
 
 

@@ -1,10 +1,7 @@
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import JunctionTree
 import numpy as np
 from LoadBayesianNetwork import load_bayesian_network
 from LoadBayesianNetwork import print_network_structure
-from Absorption import absorption
-from Absorption import apply_evidence
 from Absorption import message_passing
 
 def print_junction_tree_structure(junction_tree):
@@ -65,9 +62,26 @@ def create_separator(junction_tree, bayesian_network):
 def printAllseparator(separators):
     for edge, table in separator_tables.items():
         print(f"Separator for edge {edge}:\n{table}\n")
+def get_leaves(junction_tree, root):
+    visited = set()
 
+    def dfs(node, parent=None):
+        visited.add(node)
+        neighbors = [neighbor for neighbor in junction_tree.neighbors(node) if neighbor != parent]
+
+        if len(neighbors) == 0:
+            return node
+
+        leaves =[]
+        for neighbor in neighbors:
+            if neighbor not in visited:
+                leaves.append(dfs(neighbor, node))
+
+        return leaves
+
+    return dfs(root)
 if __name__ == "__main__":
-    bif_file = "Data/asia.bif"
+    bif_file = "Data/cancer.bif"
     bayesian_network = load_bayesian_network(bif_file)
     print_network_structure(bayesian_network)
 
@@ -78,11 +92,12 @@ if __name__ == "__main__":
     #apply_evidence(jt.get_factors(('Cancer', 'Xray')),{'Cancer':'True'})
     separator_tables = create_separator(jt, bayesian_network)
     print('Starting JTA\n')
-    evidences={}
-   # evidences={'Cancer':'True'}
+    evidences={'Cancer':'False'}
     root=list(jt.nodes)[0]
     print(root)
-    message_passing(jt,root,evidences,separator_tables)
+    leaves=get_leaves(jt,root)
+    print(leaves)
+    message_passing(jt,root,evidences,separator_tables,leaves)
     #for edge, table in separator_tables.items():
      #   print(f"Separator for edge {edge}:\n{table}\n")
 

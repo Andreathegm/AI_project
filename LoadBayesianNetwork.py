@@ -1,5 +1,4 @@
 from pgmpy.readwrite import BIFReader
-from pgmpy.models import JunctionTree
 
 def load_bayesian_network(file_path):
     reader = BIFReader(file_path)
