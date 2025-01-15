@@ -1,36 +1,40 @@
-from pgmpy.factors.discrete import DiscreteFactor
 import numpy as np
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.models import JunctionTree
 
 
-class CustomJunctionTree:
+class CustomJunctionTree(JunctionTree):
 
     def __init__(self, junction_tree, bayesian_network):
-        self.junction_tree = junction_tree
+        super().__init__()
+        self.__dict__.update(junction_tree.__dict__)
         self.potentials = {}
         self.assign_potentials()
-        self.separators = self.create_separator(bayesian_network)
+        self.separators = self.create_separators(bayesian_network) # a dict that contains discreteFactors for each separator
 
     def add_potential(self, clique, potential):
         self.potentials[clique] = potential
 
     def assign_potentials(self):
-        for potential in self.junction_tree.get_factors():
-            self.add_potential(tuple(potential.variables), potential)
+        for node in self.nodes():
+            potential = self.get_factors(node)
+            self.add_potential(node, potential)
 
-    def get_factors(self, clique):
-
+    def get_potential(self, clique):
+        print("Collect a potential")
         return self.potentials.get(clique, None)
 
-    def apply_evidence(self, clique, evidence):
+    def apply_evidence_to_potentials(self, clique, evidence):
         if clique in self.potentials:
-            factor = self.potentials[clique]
-            reduced_factor = factor.reduce(evidence, inplace=False)
-            self.potentials[clique] = reduced_factor
+            self.potentials[clique].reduce(evidence, inplace=True)
 
-    def create_separator(self, bayesian_network):
-        separator_factors = {}
+    def apply_evidence_to_separator(self, evidence, edge):
+        self.separators[edge].reduce(evidence, inplace=True)
 
-        for edge in self.junction_tree.edges:
+    def create_separators(self, bayesian_network):
+        separator_potentials = {}
+
+        for edge in self.edges:
             clique1, clique2 = edge
             union = tuple(sorted(set(clique1).union(set(clique2))))
             separator = list(set(clique1).intersection(set(clique2)))
@@ -40,7 +44,7 @@ class CustomJunctionTree:
             state_names_separator = {
                 var: bayesian_network.get_cpds(var).state_names[var] for var in separator
             }
-
+##TODO cosa fa np.prod
             values_separator = [1] * int(np.prod(cardinalities_separator))
             separator_factor = DiscreteFactor(
                 variables=separator,
@@ -49,6 +53,14 @@ class CustomJunctionTree:
                 state_names=state_names_separator
             )
 
-            separator_factors[union] = separator_factor
+            separator_potentials[union] = separator_factor
 
-        return separator_factors
+        return separator_potentials
+
+    def print_all_potentials(self):
+        print("printing all nodes' potentials ")
+        for potential in self.potentials:
+            print(self.potentials[potential])
+        print("printing all separator potentials")
+        for potential in self.separators:
+            print(self.separators[potential])
