@@ -42,12 +42,14 @@ def is_in_clique(multiple_cliques_involved, Q, clique, reduceableQ):
     i = 0
     for variable in Q:
         if variable in clique:
-            i += i
+            i += 1
             if len(reduceableQ) > 0 and variable in reduceableQ:
                 reduceableQ.discard(variable)
+
     if i == len(Q):
         return True
     else:
-        if len(reduceableQ) > 0:
-            multiple_cliques_involved.add(clique)
+        if i > 0:
+            multiple_cliques_involved.append(clique)
+
 

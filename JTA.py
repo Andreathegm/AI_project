@@ -1,3 +1,5 @@
+import General_Util
+
 
 def absorption(junction_tree, absorbed_clique, absorber_clique, separator):
     print(f"Absorbed clique:{absorbed_clique},Absorber clique:{absorber_clique}")
@@ -19,9 +21,18 @@ def absorption(junction_tree, absorbed_clique, absorber_clique, separator):
     junction_tree.add_factors(absorber_potential)
 
 
-def message_passing(custom_junction_tree, custom_junction_tree_root, evidences, leaves):
+def message_passing(Q, custom_junction_tree, custom_junction_tree_root, evidences, leaves):
+    single_clique = None
+    multiple_cliques_involved = []   # set of cliques that contains altogether the variables in Q
+    reducableQ = set(Q)
 
     def propagatemessage(current_clique, parent_clique=None):
+        nonlocal single_clique
+        nonlocal multiple_cliques_involved
+        nonlocal reducableQ
+
+        if General_Util.is_in_clique(multiple_cliques_involved, Q, current_clique, reducableQ) and single_clique is None:
+                single_clique = current_clique
 
         potential = custom_junction_tree.get_factors(current_clique)
         dict = {}
@@ -71,4 +82,13 @@ def message_passing(custom_junction_tree, custom_junction_tree_root, evidences, 
 
     collectmessages(leaves)
     propagatemessage(custom_junction_tree_root)
+    if single_clique is None:
+        print(f"Q is in cliques:")
+        for address in multiple_cliques_involved:
+            print(address)
+        return multiple_cliques_involved
+    else:
+        print(f"Q is in clique {single_clique} ")
+        return single_clique
+
 
