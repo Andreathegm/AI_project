@@ -8,10 +8,9 @@ def load_bayesian_network(file_path):
 
 
 def transform_to_junction_tree(bayesian_network):
-
     return bayesian_network.to_junction_tree()
 
 
 def print_network_structure(network):
-    print("Nodi:", network.nodes())
-    print("Archi:", network.edges())
+    print("Nodes:", network.nodes())
+    print("Edges:", network.edges())
