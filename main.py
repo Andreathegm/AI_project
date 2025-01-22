@@ -1,96 +1,62 @@
+import os
+os.environ["NUMEXPR_MAX_THREADS"] = "16"
 import General_Util
 import Bayesian_Network_Util
+import JTA
 from CustomJunctionTree import CustomJunctionTree
 from JTA import message_passing
 import InputHandler
 import CondtionalQuery
 
 if __name__ == "__main__":
-    bif_file = "Data/asia.bif"
-    bayesian_network = Bayesian_Network_Util.load_bayesian_network(bif_file)
-    print("Bayesian Network loaded successfully!")
-    provide_evidence = InputHandler.provide_evidence()
 
+    # 1 Load Bayesian Network from file chosen by user
+    files = ["Data/cancer.bif", "Data/asia.bif", "Data/urn.bif"]
+    bif_file = InputHandler.choose_file(files)
+    bayesian_network = Bayesian_Network_Util.load_bayesian_network(bif_file)
+
+    # 2 Manage user input
+    provide_evidence = InputHandler.provide_evidence()
     evidences = {}
     Q = {}
-    formattedQ = None
-    formattedEvidences = None
-    formattedQ_brute_force = None
-    formattedEvidences_brute_force = None
-    stringU = None
 
-    if provide_evidence:
-        evidences, Q = InputHandler.request_conditional_probability(bayesian_network)
-        print(f"Evidences: {evidences} , Q: {Q}")
-        formattedQ = ', '.join(f"{key} = {value}" for key, value in Q.items())
-        formattedEvidences = ', '.join(f"{key} = {value}" for key, value in evidences.items())
-        formattedQ_brute_force = ', '.join(f"{key} " for key in Q)
-        formattedEvidences_brute_force = ', '.join(f"{key} " for key in evidences)
+    # 2.1 load variables from input
+    (evidences, Q, formattedQ, formattedEvidences, formattedQ_brute_force,
+     formattedEvidences_brute_force, stringU) = InputHandler.load_variables_from_input(provide_evidence,
+                                                                                       bayesian_network, Q, evidences)
+    # 3 Bayesian network smoothing
+    Bayesian_Network_Util.print_all_cpds(bayesian_network)
+    Bayesian_Network_Util.apply_smoothing_to_bn(bayesian_network)
+    Bayesian_Network_Util.print_all_cpds(bayesian_network)
 
-    else:
-        stringU = "P(U) : "
+    # 3.1 Calculate conditional probability using brute force
+    CondtionalQuery.calculate_and_print_brute_force_result(bayesian_network, Q, evidences, provide_evidence,
+                                                            formattedQ_brute_force,formattedEvidences_brute_force, stringU)
 
-    if provide_evidence:
-        print(f"P({formattedQ_brute_force}|{formattedEvidences_brute_force})\n"
-              f"{CondtionalQuery.conditional_probability_bruteforce(bayesian_network, Q, evidences)}")
-    else:
-        print(f"{stringU}\n{CondtionalQuery.conditional_probability_bruteforce(bayesian_network, Q, evidences)}")
-
-    print("Building Junction Tree\n")
+    # 4 junction tree building
     junction_tree = Bayesian_Network_Util.transform_to_junction_tree(bayesian_network)
-    print("\n\nUpdating junction tree state names")
-    General_Util.update_junction_tree_state_names(bayesian_network, junction_tree)
-    print("\n\nUpdated junction tree state names\n")
-    for factor in junction_tree.get_factors():
-        print(f"Potential variables: {factor.variables} \n Potential names: {factor.state_names}")
-
-    General_Util.print_all_states_to_no(junction_tree)
-
-    print("Building Custom Junction Tree")
     jt = CustomJunctionTree(junction_tree, bayesian_network)
-    print("Custom Junction Tree built successfully!")
 
     # print information about junction tree
-    General_Util.print_junction_tree_structure(jt)
+    jt.print_junction_tree_structure()
     jt.print_all_potentials()
-    jt.print_all_vars_and_state_names()
 
-    # apply evidence to all potentials (including the separators)
+    # 4.1  apply evidence to all potentials (including the separators) and print them(to see the effect of the evidence)
     General_Util.apply_evidence_to_all_potentials(jt, evidences)
     jt.print_all_potentials()
 
-    # start JTA
+    # 4.2  JTA
     print('Starting JTA...\n')
-    root = list(jt.nodes)[0]
-    print(f"the root is:{root}")
-    keysQ = tuple(Q.keys())
-    evideces_key = tuple(evidences.keys())
-
+    root, keysQ, evidences_key = list(jt.nodes)[0], tuple(Q.keys()), tuple(evidences.keys())
     # returns all the necessary cliques to calculate the conditional probability
     cliques_containingQ = message_passing(keysQ, jt, root)
+    print("JTA finished\n")
 
     # normalize all potentials to get actual distributions
     jt.normalize_all_potentials()
-    print("All potentials normalized\n\n")
 
-    # print all necessary potentials to calculate the conditional probability
-    print("Printing all potentials to calculate the conditional probability")
-    if not isinstance(cliques_containingQ, list):
-        print(cliques_containingQ)
-        print(jt.potentials[cliques_containingQ])
-    else:
-        for clique in cliques_containingQ:
-            print(clique)
-            print(jt.potentials[clique])
+    # 4.3 calculate the conditional probability
+    JTA.print_result_for_jta(provide_evidence, cliques_containingQ, Q, keysQ, evidences_key, jt, formattedQ_brute_force,
+                             formattedQ, formattedEvidences)
 
-    # calculate the conditional probability
-    if provide_evidence:
-        probability = CondtionalQuery.calculate_conditional_probability(cliques_containingQ, keysQ, evideces_key, jt)
-        print(f" Distribution requested :  P({formattedQ_brute_force} | {formattedEvidences}) :\n{probability._str(phi_or_p='probabilty')}")
-        probability.reduce(Q.items(), inplace=True)
-        value = probability.values
-        print(f" Probability of requested realization of Q  :  P({formattedQ} | {formattedEvidences}) : {value}")
-    else:
-        # print the distribution of the variable U across all network
-        jt.print_all_probability()
 

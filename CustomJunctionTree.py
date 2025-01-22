@@ -6,6 +6,7 @@ from pgmpy.models import JunctionTree
 class CustomJunctionTree(JunctionTree):
 
     def __init__(self, junction_tree, bayesian_network):
+        print("Building Custom Junction Tree...")
         super().__init__()
         self.__dict__.update(junction_tree.__dict__)
         self.potentials = {}
@@ -13,6 +14,7 @@ class CustomJunctionTree(JunctionTree):
 
         # a dict that contains discreteFactors for each separator
         self.separators = self.create_separators(bayesian_network)
+        print("Custom Junction Tree built successfully!")
 
     def add_potential(self, clique, potential):
         self.potentials[clique] = potential
@@ -29,7 +31,6 @@ class CustomJunctionTree(JunctionTree):
     # to the potentials and to the separators, evidences must be a list
     def apply_evidence_to_potentials(self, clique, evidence):
         if clique in self.potentials:
-            print(self.potentials[clique].state_names)
             self.potentials[clique].reduce(evidence, inplace=True)
 
     def apply_evidence_to_separator(self, evidence, edge):
@@ -65,6 +66,7 @@ class CustomJunctionTree(JunctionTree):
             self.potentials[potential].normalize(inplace=True)
         for potential in self.separators:
             self.separators[potential].normalize(inplace=True)
+        print("All potentials has been normalized\n")
 
     # several print methods
     def print_all_vars_and_state_names(self):
@@ -77,18 +79,22 @@ class CustomJunctionTree(JunctionTree):
             print(f"mapping for  {potential} is :\n {self.potentials[potential].name_to_no}")
 
     def print_all_potentials(self, _str=None):
-        print("printing all nodes' potentials \n")
+        print("\n----PRINTING THE POTENTIAL OF ALL NODES---- \n")
         for potential in self.potentials:
             if not _str:
                 print(f"Potential for clique {potential} :\n {self.potentials[potential]}\n")
             else:
                 print(f"{_str} for clique {potential} :\n {self.potentials[potential]._str(phi_or_p=_str)}")
-        print("printing all separator potentials")
+        print("\n----PRINTING THE POTENTIAL OF ALL SEPARATORS----\n")
         for potential in self.separators:
             if not _str:
-                print(f"Potential for separator identified with {potential} :\n {self.separators[potential]}")
+                print(f"Potential for separator identified with {potential} :\n {self.separators[potential]}\n")
             else:
                 print(f"{_str} for separator identified with {potential} :\n {self.separators[potential]._str(phi_or_p=_str)}")
 
     def print_all_probability(self):
         self.print_all_potentials('probability')
+
+    def print_junction_tree_structure(self):
+        print(f"\nJunction Tree nodes (cliques): {self.nodes()}")
+        print(f"Junction Tree edges: {self.edges()}\n")

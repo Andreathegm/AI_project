@@ -30,7 +30,6 @@ probability ( personal_action | draw, lie ) {
 	(red, no) 0.99, 0.01;
 	(blue, no) 0.01, 0.99;
 }
-
 probability ( actual_action | personal_action, group_action ) {
 	(red, rr) 1.0, 0.0;
 	(blue, rr) 0.99, 0.01;

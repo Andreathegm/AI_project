@@ -4,7 +4,7 @@ def calculate_conditional_probability(cliques_containingQ, Q, evidences_key, cus
     if isinstance(cliques_containingQ, list):
         for clique in cliques_containingQ:
             potential = custom_junction_tree.get_potential(clique)
-            marginalized_vars = set(potential.variables)-(set(potential.variables).intersection(set(Q))-set(evidences_key))
+            marginalized_vars = set(potential.variables)-(set(potential.variables).intersection(set(Q)))-set(evidences_key)
             print(f" Marginalized var for clique= {clique} are : {marginalized_vars}")
             if not len(marginalized_vars) == 0:
                 factors_to_multiply.append(potential.marginalize(variables=list(marginalized_vars), inplace=False))
@@ -12,37 +12,23 @@ def calculate_conditional_probability(cliques_containingQ, Q, evidences_key, cus
             else:
                 factors_to_multiply.append(potential)
     else:
-        marginalized_vars = set(cliques_containingQ)-(set(cliques_containingQ).intersection(set(Q))-set(evidences_key))
-        print(marginalized_vars)
+        marginalized_vars = set(cliques_containingQ)-(set(cliques_containingQ).intersection(set(Q)))-set(evidences_key)
         potential = custom_junction_tree.get_potential(cliques_containingQ)
-        print(f" variables for {cliques_containingQ} are {potential.variables}")
         if not len(marginalized_vars) == 0:
             factor = potential.marginalize(variables=list(marginalized_vars), inplace=False)
-            print("marginalized")
         else:
-            print("not marginalized")
             factor = potential
 
     if isinstance(cliques_containingQ, list):
-        print("Multiplying factors to get conjunctive factor")
         factor = factors_to_multiply[0].copy()
         print(len(factors_to_multiply))
         for i in range(1, len(factors_to_multiply)):
-            print("i'm in the loop")
             factor = factor.product(factors_to_multiply[i], inplace=False)
 
     return factor
 
 
-def conditional_probability_bruteforce(bayesian_network, Q, evidences):
-    variables = set(bayesian_network.nodes())
-
-    query_variables = set(Q.keys())
-    evidence_variables = set(evidences.keys())
-    observed_variables = query_variables.union(evidence_variables)
-
-    hidden_variables = variables - observed_variables
-
+def conditional_probability_bruteforce(provide_evidence, bayesian_network, Q, evidences):
     joint_factor = None
     for cpd in bayesian_network.get_cpds():
         if joint_factor is None:
@@ -50,15 +36,37 @@ def conditional_probability_bruteforce(bayesian_network, Q, evidences):
         else:
             joint_factor = joint_factor.product(cpd, inplace=False)
 
-    pu_full = joint_factor.copy()
-    pu_reduced = joint_factor.copy()
+    if provide_evidence:
+        variables = set(bayesian_network.nodes())
+        query_variables = set(Q.keys())
+        evidence_variables = set(evidences.keys())
+        observed_variables = query_variables.union(evidence_variables)
+        hidden_variables = variables - observed_variables
 
-    marginalized_out_1 = hidden_variables
-    pu_reduced.marginalize(variables=list(marginalized_out_1), inplace=True)
+        pu_full = joint_factor.copy()
+        pu_reduced = joint_factor.copy()
 
-    marginalized_out_2 = variables - evidence_variables
-    pu_full.marginalize(variables=marginalized_out_2, inplace=True)
+        # Calculate nominator P(Q, E)
+        marginalized_out_1 = hidden_variables
+        pu_reduced.marginalize(variables=list(marginalized_out_1), inplace=True)
 
-    pu_reduced.divide(pu_full, inplace=True)
+        # Calculate denominator P(E)
+        marginalized_out_2 = variables - evidence_variables
+        pu_full.marginalize(variables=marginalized_out_2, inplace=True)
 
-    return pu_reduced
+        # Calculate P(Q|E) = P(Q, E) / P(E)
+        pu_reduced.divide(pu_full, inplace=True)
+        return pu_reduced
+
+    else:
+        return joint_factor
+
+
+def calculate_and_print_brute_force_result(bayesian_network, Q, evidences, provide_evidence, formattedQ_brute_force,
+                                                        formattedEvidences_brute_force, stringU):
+    print("----PRINTING RESULT USING BRUTE FORCE----\n")
+    if provide_evidence:
+        print(f"P({formattedQ_brute_force}|{formattedEvidences_brute_force}):\n"
+              f"{conditional_probability_bruteforce(provide_evidence,bayesian_network, Q, evidences)}\n")
+    else:
+        print(f"{stringU}\n{conditional_probability_bruteforce(provide_evidence,bayesian_network, Q, evidences)}\n")

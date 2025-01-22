@@ -1,3 +1,4 @@
+import CondtionalQuery
 import General_Util
 
 
@@ -73,11 +74,25 @@ def message_passing(Q, custom_junction_tree, custom_junction_tree_root):
         print(f"Q is in cliques:")
         for address in multiple_cliques_involved:
             print(address)
+        print("\n")
         return multiple_cliques_involved
     else:
-        print(f"Q is in clique {single_clique} ")
+        print(f"Q is in clique : {single_clique}\n ")
         return single_clique
 
 
 def update_separator(junction_tree, edge, new_separator):
     junction_tree.separators[edge] = new_separator
+
+
+def print_result_for_jta(provide_evidence, cliques_containingQ, Q, keysQ, evideces_key, jt, formattedQ_brute_force,
+                         formattedQ, formattedEvidences):
+    if provide_evidence:
+        probability = CondtionalQuery.calculate_conditional_probability(cliques_containingQ, keysQ, evideces_key, jt)
+        print(f"DISTRIBUTION REQUESTED :  P({formattedQ_brute_force} | {formattedEvidences}) :\n{probability._str(phi_or_p='probabilty')}\n")
+        probability.reduce(Q.items(), inplace=True)
+        value = probability.values
+        print(f"Probability of requested realization of Q  :  P({formattedQ} | {formattedEvidences}) : {value}")
+    else:
+        # print the distribution of the variable U across all network
+        jt.print_all_probability()
