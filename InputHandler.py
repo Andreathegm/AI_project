@@ -21,7 +21,7 @@ def request_conditional_probability(bayesian_network):
     not_chosen_nodes = list(bayesian_network.nodes())
     evidences = {}
     Q = {}
-    evidences = apply_evidence(bayesian_network, not_chosen_nodes, evidences,stringEvidences)
+    evidences = apply_evidence(bayesian_network, not_chosen_nodes, evidences, stringEvidences)
     Q = apply_evidence(bayesian_network, not_chosen_nodes, Q, stringQ)
     return evidences, Q
 
@@ -90,4 +90,29 @@ def load_variables_from_input(provide_evidence, bayesian_network, Q, evidences):
         stringU = "P(U) : "
 
     return evidences, Q, formattedQ, formattedEvidences, formattedQ_brute_force, formattedEvidences_brute_force, stringU
+
+
+def process_new_request():
+    while True:
+        try:
+            print("\nDo you want to make another request? (y/n)")
+            _input = input().strip().lower()
+            if _input == 'y':
+                while True:
+                    print("1. New request on the same model")
+                    print("2. New request on a different model")
+                    print("3. Back one step")
+                    choice = int(input())
+                    if choice == 1 or choice == 2:
+                        return choice
+                    elif choice == 3:
+                        break
+                    else:
+                        print("Invalid input. Please try again.")
+            elif _input == 'n':
+                return 0
+            else:
+                print("Invalid input. Please try again.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
 
