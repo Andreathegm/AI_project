@@ -80,7 +80,8 @@ def load_variables_from_input(provide_evidence, bayesian_network, Q, evidences):
     stringU = None
 
     if provide_evidence:
-        evidences, Q = request_conditional_probability(bayesian_network)
+        if len(evidences) == 0 and len(Q) == 0:
+            evidences, Q = request_conditional_probability(bayesian_network)
         print(f"\nEvidences: {evidences}, Q: {Q}\n\n")
         formattedQ = ', '.join(f"{key} = {value}" for key, value in Q.items())
         formattedEvidences = ', '.join(f"{key} = {value}" for key, value in evidences.items())
@@ -116,3 +117,17 @@ def process_new_request():
         except ValueError:
             print("Invalid input. Please enter a number.")
 
+
+def is_printing_result():
+    while True:
+        try:
+            print("\nDo you want to print the result for the default couples of Q,e in all three networks? (y/n)")
+            _input = input().strip().lower()
+            if _input == 'y':
+                return True
+            elif _input == 'n':
+                return False
+            else:
+                print("Invalid input. Please try again.")
+        except ValueError:
+            print("Invalid input. Please try again.")

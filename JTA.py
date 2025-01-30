@@ -19,7 +19,7 @@ def absorption(junction_tree, absorbed_clique, absorber_clique, separator, edge)
 
 def message_passing(Q, custom_junction_tree, custom_junction_tree_root):
     single_clique = None
-    multiple_cliques_involved = []   # set of cliques that contains altogether the variables in Q
+    multiple_cliques_involved = []  # set of cliques that contains altogether the variables in Q
     reducableQ = set(Q)
 
     def propagate_message(current_clique, parent_clique=None):
@@ -27,7 +27,8 @@ def message_passing(Q, custom_junction_tree, custom_junction_tree_root):
         nonlocal multiple_cliques_involved
         nonlocal reducableQ
 
-        if General_Util.is_in_clique(multiple_cliques_involved, Q, current_clique, reducableQ) and single_clique is None:
+        if (General_Util.is_in_clique(multiple_cliques_involved, Q,
+                                      current_clique, reducableQ) and single_clique is None):
             single_clique = current_clique
 
         neighbors = [neighbor for neighbor in custom_junction_tree.neighbors(current_clique) if neighbor != parent_clique]
@@ -86,13 +87,14 @@ def update_separator(junction_tree, edge, new_separator):
 
 
 def print_result_for_jta(provide_evidence, cliques_containingQ, Q, keysQ, evideces_key, jt, formattedQ_brute_force,
-                         formattedQ, formattedEvidences):
+                         formattedQ, formattedEvidences,separator_paths):
     if provide_evidence:
-        probability = CondtionalQuery.calculate_conditional_probability(cliques_containingQ, keysQ, evideces_key, jt)
+        probability = CondtionalQuery.calculate_conditional_probability(cliques_containingQ, keysQ, evideces_key, jt, separator_paths)
         print(f"DISTRIBUTION REQUESTED :  P({formattedQ_brute_force} | {formattedEvidences}) :\n{probability._str(phi_or_p='probabilty')}\n")
         probability.reduce(Q.items(), inplace=True)
         value = probability.values
         print(f"Probability of requested realization of Q  :  P({formattedQ} | {formattedEvidences}) : {value}")
+        return value
     else:
         # print the distribution of the variable U across all network
         jt.print_all_probability()

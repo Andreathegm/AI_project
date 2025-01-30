@@ -1,3 +1,6 @@
+from collections import deque
+
+
 # print potentials for (normal) junction tree using the method get_factors()
 def print_all_potentials(junction_tree):
     for clique in junction_tree.nodes:
@@ -11,15 +14,15 @@ def is_in_clique(multiple_cliques_involved, Q, clique, reducibleQ):
     i = 0
     for variable in Q:
         if variable in clique:
-            i += 1
             if len(reducibleQ) > 0 and variable in reducibleQ:
+                i += 1
                 reducibleQ.discard(variable)
 
     if i == len(Q):
         return True
-    else:
-        if i > 0:
-            multiple_cliques_involved.append(clique)
+
+    if i > 0:
+        multiple_cliques_involved.append(clique)
 
 
 def apply_evidence_to_all_potentials(custom_junction_tree, evidences):
@@ -76,3 +79,68 @@ def update_junction_tree_state_names(bayesian_network, junction_tree):
 def print_all_states_to_no(junction_tree):
     for potential in junction_tree.get_factors():
         print(f"mapping  is :\n {potential.name_to_no}\n\n\n")
+
+
+def connect_cliques(junction_tree, cliques_containing_Q):
+    # Input validation
+    if not isinstance(cliques_containing_Q, list):
+        return None, None
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_cliques = [c for c in cliques_containing_Q if not (c in seen or seen.add(c))]
+
+    if not unique_cliques:
+        return [], []
+
+    # Initialize with first clique
+    result_cliques = [unique_cliques[0]]
+    connected = {unique_cliques[0]}
+    separators = []
+
+    def find_connection_path(start, targets):
+        visited = set()
+        queue = deque([(start, [], [])])
+
+        while queue:
+            current, path, seps = queue.popleft()
+            if current in targets:
+                return path + [current], seps
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for neighbor in junction_tree.neighbors(current):
+                # Get separator between current and neighbor
+                edge = tuple(sorted(set(current).union(set(neighbor))))
+                sep = junction_tree.separators.get(edge, None)
+
+                new_path = path + [current]
+                new_seps = seps + [sep] if sep is not None else seps
+                queue.append((neighbor, new_path, new_seps))
+
+        return None, None
+
+    # Connect remaining cliques
+    for clique in unique_cliques[1:]:
+        if clique in connected:
+            continue
+
+        # Find path to connected component
+        path, path_seps = find_connection_path(clique, connected)
+        print(f"path is : {path}, separators path is : {path_seps}")
+        if not path:
+            continue  # Shouldn't happen in valid junction tree
+
+        # Add new cliques (excluding last one which is already connected)
+        for c in path[:-1]:
+            if c not in connected:
+                result_cliques.append(c)
+                connected.add(c)
+
+        # Add new separators
+        for sep in path_seps:
+            if sep not in separators:
+                separators.append(sep)
+
+    return result_cliques, separators
