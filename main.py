@@ -29,23 +29,19 @@ if __name__ == "__main__":
                                        {"Q": {"personal_action": "blue"}, "E": {"lie": "yes"}}
                                        ]
                       }
-    '''
-    default_couple = {"Data/asia.bif": [
-                                        {"Q": {"lung": "Yes", "bronc": "Yes", "xray": "Yes"}, "E": {"tub": "Yes", "asia": "No"}},
-
-                                        ],
-                      }'''
     show_default_results = InputHandler.is_printing_result()
 
     if show_default_results:
 
         for file in files:
 
-            iteration = 20
+            iterations = 20
             brute_force_results = []
             jta_results = []
+            formattedQs = []
+            formattedEs = []
 
-            for j in range(iteration):
+            for j in range(iterations):
 
                 temp_brute_force_results = []
                 temp_jta_results = []
@@ -71,6 +67,9 @@ if __name__ == "__main__":
                                                                                                        bayesian_network,
                                                                                                        Q,
                                                                                                        evidences)
+                    formattedQs.append(formattedQ)
+                    formattedEs.append(formattedEvidences)
+
                     brute_force_value = CondtionalQuery.calculate_and_print_brute_force_result(bayesian_network, Q,
                                                                                                evidences,
                                                                                                provide_evidence,
@@ -111,9 +110,10 @@ if __name__ == "__main__":
                     brute_force_results = [x + y for x, y in zip(brute_force_results, temp_brute_force_results)]
                     jta_results = [x + y for x, y in zip(jta_results, temp_jta_results)]
 
-            brute_force_results = [x / iteration for x in brute_force_results]
-            jta_results = [x / iteration for x in jta_results]
-            Plot.plot_differences(brute_force_results, jta_results, file)
+            brute_force_results = [x / iterations for x in brute_force_results]
+            jta_results = [x / iterations for x in jta_results]
+            Plot.save_values_to_text(brute_force_results, jta_results, file, iterations, formattedQs, formattedEs)
+            Plot.plot_differences(brute_force_results, jta_results, file, iterations)
     else:
 
         while True:
@@ -172,15 +172,26 @@ if __name__ == "__main__":
                 root, keysQ, evidences_key = list(jt.nodes)[0], tuple(Q.keys()), tuple(evidences.keys())
                 # returns all the necessary cliques to calculate the conditional probability
                 cliques_containingQ = message_passing(keysQ, jt, root)
+                #check for a path between clique
+                cliques_paths, separator_paths = General_Util.connect_cliques(jt, cliques_containingQ)
+                print(cliques_paths, separator_paths)
+
+                if cliques_paths and separator_paths:
+                    cliques_containingQ = cliques_paths
+                    print("found path between cliques")
+                    print(f"path is : {cliques_paths}, separators path is : {separator_paths}")
+
                 print("JTA finished\n")
+
 
                 # normalize all potentials to get actual distributions
                 jt.normalize_all_potentials()
 
+
                 # 4.3 calculate the conditional probability
                 JTA.print_result_for_jta(provide_evidence, cliques_containingQ, Q, keysQ, evidences_key, jt,
                                          formattedQ_brute_force,
-                                         formattedQ, formattedEvidences)
+                                         formattedQ, formattedEvidences,separator_paths)
 
                 # 5 Possible new request:
                 choice = InputHandler.process_new_request()

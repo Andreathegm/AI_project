@@ -140,7 +140,7 @@ def connect_cliques(junction_tree, cliques_containing_Q):
 
         # Add new separators
         for sep in path_seps:
-            if sep not in separators:
+            if all(id(sep) != id(existing_sep) for existing_sep in separators):
                 separators.append(sep)
 
     return result_cliques, separators
